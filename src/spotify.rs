@@ -12,6 +12,9 @@ use url::Url;
 
 use crate::error::SpotifyError;
 
+use librespot::core::Error;
+
+
 pub struct Spotify {
 	// librespotify sessopm
 	pub session: Session,
@@ -25,13 +28,12 @@ impl Spotify {
 		password: &str,
 		client_id: &str,
 		client_secret: &str,
-	) -> Result<Spotify, SpotifyError> {
+	) -> Result<Spotify, Error> {
 		// librespot
 		let credentials = Credentials::with_password(username, password);
-		let (session, _) = Session::connect(
-			SessionConfig::default(),
+		let session = Session::new(SessionConfig::default(),Some(Cache::new(Some(Path::new("credentials_cache")), None, None, None).unwrap()));
+		session.connect(
 			credentials,
-			Some(Cache::new(Some(Path::new("credentials_cache")), None, None, None).unwrap()),
 			true,
 		)
 		.await?;
