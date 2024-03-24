@@ -22,6 +22,7 @@ pub struct Settings {
 	pub client_secret: String,
 	pub refresh_ui_seconds: u64,
 	pub downloader: DownloaderConfig,
+	pub version: String,
 }
 
 // On UNIX systems (eg. Linux, *BSD, even macOS), follow the
@@ -50,6 +51,7 @@ impl Settings {
 			client_secret: client_secret.to_string(),
 			refresh_ui_seconds: 1,
 			downloader: DownloaderConfig::new(),
+			version: "0.0.1a".to_string()
 		}
 	}
 

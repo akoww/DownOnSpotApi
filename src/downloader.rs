@@ -15,23 +15,22 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use std::sync::Arc;
 
 use crate::converter::AudioConverter;
 use crate::error::SpotifyError;
-use crate::spotify::{Spotify, SpotifyItem};
+use crate::spotify::Spotify;
 use crate::tag::{Field, TagWrap};
 
 /// Wrapper for use with UI
 #[derive(Debug, Clone)]
 pub struct Downloader {
 	rx: Receiver<Response>,
-	tx: Sender<Message>,
-
-	spotify: Spotify,
+	tx: Sender<Message>
 }
 impl Downloader {
 	/// Create new instance
-	pub fn new(config: DownloaderConfig, spotify: Spotify) -> Downloader {
+	pub fn new(config: DownloaderConfig, spotify: Arc<Spotify>) -> Downloader {
 		let (tx_0, rx_0) = bounded(1);
 		let (tx_1, rx_1) = bounded(1);
 
@@ -42,8 +41,7 @@ impl Downloader {
 		});
 		Downloader {
 			rx: rx_0,
-			tx: tx_1,
-			spotify,
+			tx: tx_1
 		}
 	}
 	/// Add item to download queue
@@ -59,58 +57,6 @@ impl Downloader {
 		self.tx.send(Message::AddToQueue(downloads)).await.unwrap();
 	}
 
-	/// handle input, either link or search
-	pub async fn handle_input(
-		&self,
-		input: &str,
-	) -> Result<Option<Vec<SearchResult>>, SpotifyError> {
-		if let Ok(uri) = Spotify::parse_uri(input) {
-			self.add_uri(&uri).await?;
-			Ok(None)
-		} else {
-			let results: Vec<SearchResult> = self
-				.spotify
-				.search(input)
-				.await?
-				.into_iter()
-				.map(SearchResult::from)
-				.collect();
-
-			Ok(Some(results))
-		}
-	}
-
-	/// Add URL or URI to queue
-	pub async fn add_uri(&self, uri: &str) -> Result<(), SpotifyError> {
-		let uri = Spotify::parse_uri(uri)?;
-		let item = self.spotify.resolve_uri(&uri).await?;
-		match item {
-			SpotifyItem::Track(t) => self.add_to_queue(t.into()).await,
-			SpotifyItem::Album(a) => {
-				let tracks = self.spotify.full_album(&a.id).await?;
-				let queue: Vec<Download> = tracks.into_iter().map(|t| t.into()).collect();
-				self.add_to_queue_multiple(queue).await;
-			}
-			SpotifyItem::Playlist(p) => {
-				let tracks = self.spotify.full_playlist(&p.id).await?;
-				let queue: Vec<Download> = tracks.into_iter().map(|t| t.into()).collect();
-				self.add_to_queue_multiple(queue).await;
-			}
-			SpotifyItem::Artist(a) => {
-				let tracks = self.spotify.full_artist(&a.id).await?;
-				let queue: Vec<Download> = tracks.into_iter().map(|t| t.into()).collect();
-				self.add_to_queue_multiple(queue).await;
-			}
-
-			// Unsupported
-			SpotifyItem::Other(u) => {
-				error!("Unsupported URI: {}", u);
-				return Err(SpotifyError::Unavailable);
-			}
-		};
-		Ok(())
-	}
-
 	/// Get all downloads
 	pub async fn get_downloads(&self) -> Vec<Download> {
 		self.tx.send(Message::GetDownloads).await.unwrap();
@@ -121,13 +67,13 @@ impl Downloader {
 
 async fn communication_thread(
 	config: DownloaderConfig,
-	spotify: Spotify,
+	spotify: Arc<Spotify>,
 	rx: Receiver<Message>,
 	tx: Sender<Response>,
 	self_tx: Sender<Message>,
 ) {
 	// Downloader
-	let downloader = DownloaderInternal::new(spotify.clone(), self_tx.clone());
+	let downloader = DownloaderInternal::new(spotify, self_tx.clone());
 	let downloader_tx = downloader.tx.clone();
 	tokio::spawn(async move {
 		downloader.download_loop().await;
@@ -137,6 +83,10 @@ async fn communication_thread(
 
 	// Receive messages
 	while let Ok(msg) = rx.recv().await {
+
+		// debug log - added download
+		print!("Download added: {:?}", msg);
+
 		match msg {
 			// Send job to worker thread
 			Message::GetJob => {
@@ -195,7 +145,7 @@ async fn communication_thread(
 
 /// Spotify downloader
 pub struct DownloaderInternal {
-	spotify: Spotify,
+	spotify: Arc<Spotify>,
 	pub tx: Sender<DownloaderMessage>,
 	rx: Receiver<DownloaderMessage>,
 	event_tx: Sender<Message>,
@@ -207,7 +157,7 @@ pub enum DownloaderMessage {
 
 impl DownloaderInternal {
 	/// Create new instance
-	pub fn new(spotify: Spotify, event_tx: Sender<Message>) -> DownloaderInternal {
+	pub fn new(spotify: Arc<Spotify>, event_tx: Sender<Message>) -> DownloaderInternal {
 		let (tx, rx) = bounded(1);
 		DownloaderInternal {
 			spotify,
@@ -763,7 +713,7 @@ pub enum Response {
 	Downloads(Vec<Download>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Download {
 	pub id: i64,
 	pub track_id: String,
@@ -830,7 +780,7 @@ impl From<Download> for DownloadJob {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum DownloadState {
 	None,
 	Lock,
