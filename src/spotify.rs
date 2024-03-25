@@ -62,6 +62,11 @@ impl Spotify {
 		Ok(artist.data)
 	}
 
+	pub async fn user_playlists(&self) -> Result<Vec<aspotify::model::PlaylistSimplified>, SpotifyError> {
+		let playlists = self.spotify.playlists().current_users_playlists(200,0).await?;
+		Ok(playlists.data.items)
+	}
+
 	pub async fn search_tracks(&self, query: &str) -> Result<Vec<Track>, SpotifyError> {
 		Ok(self
 			.spotify

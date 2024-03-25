@@ -27,6 +27,7 @@ pub async fn launch_rest(settings: &Settings, spotify: Arc<Spotify>, downloader:
 		.mount("/", routes![album])
 		.mount("/", routes![playlist])
 		.mount("/", routes![artist])
+		.mount("/", routes![user_playlists])
 		.mount("/", routes![search])
 		.register("/", catchers![general_not_found])
 		.launch()
@@ -43,6 +44,7 @@ fn general_not_found() -> String {
 		"/spotify/album/<id>",
 		"/spotify/playlist/<id>",
 		"/spotify/artist/<id>",
+		"/spotify/user_playlists",
 		"/spotify/search/<name>",
 		"/downloads/list",
 		"/downloads/queue",
@@ -50,7 +52,6 @@ fn general_not_found() -> String {
 	];
 
 	serde_json::to_string_pretty(&routes).unwrap()
-
 }
 
 #[get("/version")]
@@ -124,6 +125,18 @@ async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> String {
 	serde_json::to_string_pretty(&obj).unwrap()
 }
 
+#[get("/spotify/user_playlists")]
+async fn user_playlists(spotify: &State<Arc<Spotify>>) -> String {
+	match spotify.user_playlists().await {
+		Ok(playlists) => serde_json::to_string_pretty(&playlists)
+			.unwrap()
+			.to_string(),
+		Err(e) => {
+			format!("{{\"error\": \"{}\"}}", e)
+		}
+	}
+}
+
 #[get("/downloads/queue")]
 async fn downloads_queue(downloader: &State<Arc<Downloader>>) -> String {
 	let queue = downloader.get_downloads().await;
@@ -194,7 +207,7 @@ fn downloads_list(settings: &State<Settings>) -> String {
 		}
 	}
 
-	// format 
+	// format
 	let obj = json!({
 		"files" : files
 	});
