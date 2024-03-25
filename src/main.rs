@@ -8,6 +8,7 @@ mod settings;
 mod spotify;
 mod tag;
 mod rest;
+mod static_server;
 
 use std::sync::Arc;
 use colored::Colorize;
@@ -77,7 +78,6 @@ async fn login_spotify(settings: &Settings) -> Result<Arc<Spotify>, SpotifyError
 	}
 }
 
-
 async fn start() {
 
 	env_logger::init();
@@ -99,6 +99,9 @@ async fn start() {
 	};
 
 	let downloader = Arc::new(Downloader::new(settings.downloader.clone(), spotify.clone()));
-
+	
+	tokio::spawn(
+		static_server::start_static_server()
+	);
 	rest::launch_rest(&settings, spotify, downloader).await;
 }

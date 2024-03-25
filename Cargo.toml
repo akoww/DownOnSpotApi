@@ -25,7 +25,7 @@ dirs = "5.0.0"
 chrono = "0.4"
 lewton = "0.10"
 futures = "0.3"
-reqwest = "0.11"
+reqwest = "0.12"
 colored = "2"
 lame = "0.1"
 aspotify = "0.7.1"
@@ -38,6 +38,11 @@ sanitize-filename = "0.5.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.20", features = ["fs"] }
 env_logger = "0.11.1"
+rocket = "0.5.0"
+axum = "0.7.5"
+tower = "0.4.13"
+tower-http = { version = "0.5.0", features = ["fs", "trace"] }
+tracing = "0.1.40"
 
 [package.metadata.winres]
 OriginalFilename = "DownOnSpot.exe"
