@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2 Column Layout</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+        "axios": "https://unpkg.com/axios@1.6.7/dist/axios.min.js"
+      }
+    }
+</script>
+    <link rel="stylesheet" href="css/mini-dark.css">
+    <link rel="stylesheet" href="css/custom.css">
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="menu">
+            <h1>SpotiFU</h1>
+            <h2>Discover</h2>
+            <ul>
+                <li><a href="#home"><span class="icon-home"></span>Home</a></li>
+                <li><a href="#browse"><span class="icon-rss"></span>Browse</a></li>
+                <li><a href="#search"><span class="icon-search"></span>Search</a></li>
+                <li><a href="#downloads"><span class="icon-download"></span>Downloads</a></li>
+            </ul>
+            <h2>Library</h2>
+            <ul id="menu">
+                <li><span class="icon-bookmark"></span>Favorites</li>
+                <li><span class="icon-share"></span>Following</li>
+                <li v-for="item in items">{{ item.name }}</li>
+            </ul>
+        </div>
+        <div class="content">
+            <div class="header">
+                <input type="text" placeholder="Search track">
+            </div>
+            <h2>Content</h2>
+            <p>This is the content area.</p>
+        </div>
+    </div>
+    <div class="footer">
+        <h2>Footer</h2>
+    </div>
+</body>
+
+</html>
+
+<script type="module">
+    import { createApp } from 'vue'
+    import {menu_playlists} from './js/init.js'
+
+    createApp(menu_playlists()).mount('#menu')
+</script>

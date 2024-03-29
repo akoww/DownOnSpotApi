@@ -1,0 +1,56 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+.header {
+  background-color: #222;
+  color: #fff;
+  padding: 20px;
+}
+
+.header input[type="text"] {
+  width: 480px;
+  /* Set width as per your requirement */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.footer {
+  background-color: #333;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  padding: 0;
+}
+
+.menu {
+  width: 360px;
+  background-color: #222;
+  border-right: 1px solid #ddd;
+  height: 100vh;
+  /* Adjust according to header and footer height */
+  overflow-y: auto;
+  /* Add scrollbar if content exceeds menu height */
+}
+
+.menu ul {
+  list-style-type: none;
+}
+
+.content {
+
+  flex-grow: 1;
+  padding: 0px;
+}

@@ -2,23 +2,59 @@ extern crate rocket;
 
 use std::fs;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Instant;
+use std::time::Duration;
 
+use aspotify::Scope;
 use rocket::catch;
 use rocket::catchers;
 use rocket::get;
 use rocket::routes;
 use rocket::State;
 use serde_json::json;
+use rocket::response::Responder;
+use rocket::http::Header;
 
 use crate::downloader::Downloader;
 use crate::settings::Settings;
 use crate::spotify::Spotify;
+
+
+#[derive(Responder)]
+struct MyResponder<T> {
+    inner: T,
+    my_header: Header<'static>,
+}
+impl<'r, 'o: 'r, T: Responder<'r, 'o>> MyResponder<T> {
+    fn new(inner: T) -> Self {
+        MyResponder {
+            inner,
+            my_header: Header::new("Access-Control-Allow-Origin", "*"),
+        }
+    }
+
+	fn from(inner: T) -> Self {
+		MyResponder {
+			inner,
+			my_header: Header::new("Access-Control-Allow-Origin", "*"),
+		}
+	}
+}
+
+struct RedirectState {
+	state: Mutex<String>,
+}
+
 
 pub async fn launch_rest(settings: &Settings, spotify: Arc<Spotify>, downloader: Arc<Downloader>) {
 	rocket::build()
 		.manage(settings.clone())
 		.manage(spotify)
 		.manage(downloader)
+		.manage(RedirectState {
+			state: Mutex::new("".to_string()),
+		})
 		.mount("/", routes![version])
 		.mount("/", routes![downloads_list])
 		.mount("/", routes![downloads_queue])
@@ -29,6 +65,8 @@ pub async fn launch_rest(settings: &Settings, spotify: Arc<Spotify>, downloader:
 		.mount("/", routes![artist])
 		.mount("/", routes![user_playlists])
 		.mount("/", routes![search])
+		.mount("/", routes![login_url])
+		.mount("/", routes![login_confirm])
 		.register("/", catchers![general_not_found])
 		.launch()
 		.await
@@ -49,9 +87,64 @@ fn general_not_found() -> String {
 		"/downloads/list",
 		"/downloads/queue",
 		"/downloads/add/<id>",
+		"/login/url",
+		"/login/confirm/<code>",
 	];
 
 	serde_json::to_string_pretty(&routes).unwrap()
+}
+
+#[get("/login/confirm/<code>")]
+async fn login_confirm(
+	spotify: &State<Arc<Spotify>>,
+	redirect_state: &State<RedirectState>,
+	code: &str,
+) -> MyResponder<String> {
+	let login_state: String;
+	{
+		let locked = redirect_state.state.lock().unwrap();
+		login_state = locked.clone();
+	}
+
+	spotify.spotify.set_current_access_token(code.to_string(), Instant::now() + Duration::new(2000,0) ).await;
+
+	MyResponder::new(format!("{{\"state\": \"{}\"}}", login_state))
+}
+
+#[get("/login/url")]
+async fn login_url(spotify: &State<Arc<Spotify>>, redirect_state: &State<RedirectState>) -> MyResponder<String> {
+	let (url, state) = aspotify::authorization_url(
+		&spotify.spotify.credentials.id,
+		[
+			Scope::UgcImageUpload,
+			Scope::UserReadPlaybackState,
+			Scope::UserModifyPlaybackState,
+			Scope::UserReadCurrentlyPlaying,
+			Scope::Streaming,
+			Scope::AppRemoteControl,
+			Scope::UserReadEmail,
+			Scope::UserReadPrivate,
+			Scope::PlaylistReadCollaborative,
+			Scope::PlaylistModifyPublic,
+			Scope::PlaylistReadPrivate,
+			Scope::PlaylistModifyPrivate,
+			Scope::UserLibraryModify,
+			Scope::UserLibraryRead,
+			Scope::UserTopRead,
+			Scope::UserReadRecentlyPlayed,
+			Scope::UserFollowRead,
+			Scope::UserFollowModify,
+		]
+		.iter()
+		.copied(),
+		false,
+		"http://127.0.0.1:3001/static/login.html",
+	);
+
+	let mut locked = redirect_state.state.lock().unwrap();
+	*locked = state;
+
+	MyResponder::new(format!("{{\"url\": \"{}\"}}", url))
 }
 
 #[get("/version")]

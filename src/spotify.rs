@@ -63,7 +63,7 @@ impl Spotify {
 	}
 
 	pub async fn user_playlists(&self) -> Result<Vec<aspotify::model::PlaylistSimplified>, SpotifyError> {
-		let playlists = self.spotify.playlists().current_users_playlists(200,0).await?;
+		let playlists = self.spotify.playlists().current_users_playlists(20,0).await?;
 		Ok(playlists.data.items)
 	}
 
