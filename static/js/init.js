@@ -1,11 +1,11 @@
-import ref from 'vue';
-import axios from 'axios';
+import { ref, markRaw } from 'vue';
+//import axios from 'axios';
 
 export function menu_playlists() {
   return {
 
     setup() {
-      const items = ref([{ name: 'Foo' }, { name: 'Bar' }])
+      const items = ref([])
       return { items }
     },
 
@@ -18,7 +18,7 @@ export function menu_playlists() {
         axios.get('http://127.0.0.1:8000/spotify/user_playlists/')
           .then(response => {
             // Handle success
-            this.apiData = response.data;
+            this.items = response.data;
           })
           .catch(error => {
             // Handle error
@@ -29,13 +29,55 @@ export function menu_playlists() {
   }
 }
 
-
-export function test2() {
+function about() {
   return {
     setup() {
-      const count = ref(0)
-      return { count }
+      return {}
     },
-    template: `<div>count is {{ count }}</div>`
+    template: `<div>about</div>`
+  }
+}
+
+function contact() {
+  return {
+    setup() {
+      return {}
+    },
+    template: `<div>contact</div>`
+  }
+}
+
+
+export function content_playlists() {
+  return {
+
+    setup() {
+        const content = ref();
+        return { content }
+    },
+
+    mounted() {
+      // Function to update the current hash
+      const updateHash = () => {
+        if (window.location.hash === '#about') {
+          this.content = about();
+        } else if (window.location.hash === '#contact') {
+          this.content = contact();
+        } else  {
+          this.content = window.location.hash;
+        }
+      };
+      
+
+      // Event listener to track hash changes
+      const hashChangeListener = () => {
+        updateHash();
+      };
+      
+      window.addEventListener('hashchange', hashChangeListener);
+      hashChangeListener();
+    },
+    template: `
+      <component :is="content"></component>`
   }
 }

@@ -10,28 +10,24 @@
 
 <body>
     <script>
-        // Function to parse GET parameters
-        function parseParams() {
-            var params = {};
-            var queryString = window.location.search.substring(1);
-            var pairs = queryString.split("&");
-            for (var i = 0; i < pairs.length; i++) {
-                var pair = pairs[i].split("=");
-                params[pair[0]] = decodeURIComponent(pair[1]);
-            }
-            return params;
-        }
-
         // Send HTTP request to backend
-        function requestURL() {
-            var backendURL = 'http://127.0.0.1:8000/login/url';
+        function sendRequest(params) {
+            // Assuming backend URL is 'http://example.com/backend'
+            var backendURL = 'http://127.0.0.1:8000/login/confirm/';
+
+            // convert the windows.location into hex string
+            var hex_url = window.location.href.split('').map(function (c) {
+                return c.charCodeAt(0).toString(16);
+            }).join('');
+
+            console.log(hex_url);
 
             // Send the HTTP request
-            axios.get(backendURL)
+            axios.get(backendURL + hex_url)
                 .then(response => {
-                    var url = response.data['url'];
-                    console.log(url);
-                    window.location.href = url;
+                    // Handle success
+                    // forward to the next page
+                    window.location.href = 'http://127.0.0.1:3001/static/index.html';
                 })
                 .catch(error => {
                     // Handle error
@@ -41,7 +37,7 @@
 
         // Main function
         function main() {
-            requestURL()
+            sendRequest();
         }
 
         // Call the main function when the page loads

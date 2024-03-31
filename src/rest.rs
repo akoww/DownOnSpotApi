@@ -3,8 +3,7 @@ extern crate rocket;
 use std::fs;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Instant;
-use std::time::Duration;
+use std::{fmt::Write, num::ParseIntError};
 
 use aspotify::Scope;
 use rocket::catch;
@@ -94,6 +93,15 @@ fn general_not_found() -> String {
 	serde_json::to_string_pretty(&routes).unwrap()
 }
 
+fn decode_hex(s: &str) -> Result<String, ParseIntError> {
+    let as_vec = (0..s.len())
+	.step_by(2)
+	.map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+	.collect::<Result<Vec<_>, _>>()?;
+
+	Ok(String::from_utf8(as_vec).unwrap())
+}
+
 #[get("/login/confirm/<code>")]
 async fn login_confirm(
 	spotify: &State<Arc<Spotify>>,
@@ -106,9 +114,22 @@ async fn login_confirm(
 		login_state = locked.clone();
 	}
 
-	spotify.spotify.set_current_access_token(code.to_string(), Instant::now() + Duration::new(2000,0) ).await;
-
-	MyResponder::new(format!("{{\"state\": \"{}\"}}", login_state))
+	let redirect_url = match decode_hex(code) {
+		Ok(url) => url,
+		Err(e) => {
+			return MyResponder::new(format!("{{\"error\": \"{}\"}}", e));
+		}
+	};
+	
+	match spotify.spotify.redirected(&redirect_url, &login_state).await
+	{
+		Ok(_) => {
+			MyResponder::new("{\"state\": \"redirect success\"}".to_string())
+		}
+		Err(e) => {
+			MyResponder::new(format!("{{ \"error\": \"{}\"}}", e))
+		}
+	}
 }
 
 #[get("/login/url")]
@@ -138,7 +159,7 @@ async fn login_url(spotify: &State<Arc<Spotify>>, redirect_state: &State<Redirec
 		.iter()
 		.copied(),
 		false,
-		"http://127.0.0.1:3001/static/login.html",
+		"http://127.0.0.1:3001/static/forward.html",
 	);
 
 	let mut locked = redirect_state.state.lock().unwrap();
@@ -173,13 +194,15 @@ async fn album(spotify: &State<Arc<Spotify>>, id: &str) -> String {
 }
 
 #[get("/spotify/playlist/<id>")]
-async fn playlist(spotify: &State<Arc<Spotify>>, id: &str) -> String {
-	match spotify.playlist(id).await {
+async fn playlist(spotify: &State<Arc<Spotify>>, id: &str) -> MyResponder<String> {
+	let result = match spotify.playlist(id).await {
 		Ok(playlist) => serde_json::to_string(&playlist).unwrap().to_string(),
 		Err(e) => {
 			format!("{{\"error\": \"{}\"}}", e)
 		}
-	}
+	};
+
+	MyResponder::from(result)
 }
 
 #[get("/spotify/artist/<id>")]
@@ -219,15 +242,16 @@ async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> String {
 }
 
 #[get("/spotify/user_playlists")]
-async fn user_playlists(spotify: &State<Arc<Spotify>>) -> String {
-	match spotify.user_playlists().await {
+async fn user_playlists(spotify: &State<Arc<Spotify>>) -> MyResponder<String> {
+	let result = match spotify.user_playlists().await {
 		Ok(playlists) => serde_json::to_string_pretty(&playlists)
 			.unwrap()
 			.to_string(),
 		Err(e) => {
 			format!("{{\"error\": \"{}\"}}", e)
 		}
-	}
+	};
+	MyResponder::from(result)
 }
 
 #[get("/downloads/queue")]

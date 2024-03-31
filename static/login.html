@@ -23,18 +23,15 @@
         }
 
         // Send HTTP request to backend
-        function sendRequest(params) {
-            // Assuming backend URL is 'http://example.com/backend'
-            var backendURL = 'http://127.0.0.1:8000/login/confirm/';
-            var queryString = params['code']; // Assuming the token is passed as a GET parameter
-            console.log(queryString);
+        function requestURL() {
+            var backendURL = 'http://127.0.0.1:8000/login/url';
 
             // Send the HTTP request
-            axios.get(backendURL + queryString)
+            axios.get(backendURL)
                 .then(response => {
-                    // Handle success
-                    // forward to the next page
-                    window.location.href = 'http://127.0.0.1:3001/static/index.html';
+                    var url = response.data['url'];
+                    console.log(url);
+                    window.location.href = url;
                 })
                 .catch(error => {
                     // Handle error
@@ -44,8 +41,7 @@
 
         // Main function
         function main() {
-            var params = parseParams();
-            sendRequest(params);
+            requestURL()
         }
 
         // Call the main function when the page loads
