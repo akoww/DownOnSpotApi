@@ -1,7 +1,7 @@
 import { ref, markRaw } from 'vue';
 //import axios from 'axios';
 
-export function menu_playlists() {
+export function menu() {
   return {
 
     setup() {
@@ -47,8 +47,26 @@ function contact() {
   }
 }
 
+// function that returns a search component
+function search() {
+  return {
+    setup() {
+      // get the windows hash value and split it by ;
+      const hash = window.location.hash.split(';');
 
-export function content_playlists() {
+      // create a ref that contains all splitted values
+      const search = ref(hash);
+
+      return {
+        search
+      }
+    },
+    template: `<div> {{ search }} </div>`
+  }
+}
+
+
+export function content() {
   return {
 
     setup() {

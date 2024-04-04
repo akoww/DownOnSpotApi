@@ -55,9 +55,9 @@
 
 <script type="module">
     import { createApp } from 'vue';
-    import { menu_playlists, content_playlists } from './js/init.js';
+    import { menu, content } from './js/init.js';
 
-    createApp(menu_playlists()).mount('#menu');
+    createApp(menu()).mount('#menu');
     
-    createApp(content_playlists()).mount('#content');
+    createApp(content()).mount('#content');
 </script>
