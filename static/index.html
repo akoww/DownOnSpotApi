@@ -14,32 +14,23 @@
     }
     </script>
     <script src="https://unpkg.com/axios@1.6.7/dist/axios.min.js"></script>
-    <link rel="stylesheet" href="css/mini-dark.css">
+
     <link rel="stylesheet" href="css/custom.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
 </head>
 
 <body>
     <div class="container">
-        <div class="menu">
-            <h1>SpotiFU</h1>
-            <h2>Discover</h2>
-            <ul>
-                <li><a href="#home"><span class="icon-home"></span>Home</a></li>
-                <li><a href="#browse"><span class="icon-rss"></span>Browse</a></li>
-                <li><a href="#search"><span class="icon-search"></span>Search</a></li>
-                <li><a href="#downloads"><span class="icon-download"></span>Downloads</a></li>
-            </ul>
-            <h2>Library</h2>
-            <ul id="menu">
-                <li><a href="#favorites"><span class="icon-bookmark"></span>Favorites</a></li>
-                <li><a href="#following"><span class="icon-share"></span>Following</a></li>
-                <li v-for="item in items" :key="item.id"><a :href="'#playlist/' + item.id"><span class="icon-credit"></span>{{ item.name }}</a></li>
-            </ul>
+        <div id="menu" class="menu">
+            {{ menu }}
         </div>
         <div class="content">
-            <div class="header">
-                <input type="text" placeholder="Search track">
+            <div id="header">
+                {{ header }}
             </div>
             <div id="content">
                 {{ content }}
@@ -55,9 +46,11 @@
 
 <script type="module">
     import { createApp } from 'vue';
-    import { menu, content } from './js/init.js';
+    import { menu } from './js/menu.js';
+    import { content } from './js/content.js';
+    import { header } from './js/header.js';
 
     createApp(menu()).mount('#menu');
-    
+    createApp(header()).mount('#header');
     createApp(content()).mount('#content');
 </script>

@@ -4,10 +4,14 @@ body {
   font-family: Arial, sans-serif;
 }
 
+
 .header {
   background-color: #222;
   color: #fff;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .header input[type="text"] {
@@ -17,6 +21,15 @@ body {
   border: 1px solid #ccc;
   border-radius: 5px;
   box-sizing: border-box;
+}
+
+.header .loginbutton {
+  padding: 10px 25px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
 }
 
 .footer {
@@ -53,4 +66,45 @@ body {
 
   flex-grow: 1;
   padding: 0px;
+}
+
+.content .playlist_content .playlist_header
+{
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+}
+
+.content .playlist_content .playlist_header .text 
+{
+flex : 1;
+}
+
+.content .playlist_content .playlist_header .image 
+{
+  flex: 0 0 auto;
+  margin-right: 20px; /* Adjust spacing */
+}
+
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+/* Set minimal width for all columns */
+th:first-child, td:first-child,
+th:last-child, td:last-child {
+  width: 30px; /* adjust as needed */
+}
+
+/* Set second column to expand */
+th:nth-child(2), td:nth-child(2) {
+  width: auto;
 }
