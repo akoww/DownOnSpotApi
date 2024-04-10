@@ -216,7 +216,7 @@ async fn artist(spotify: &State<Arc<Spotify>>, id: &str) -> String {
 }
 
 #[get("/spotify/search/<name>")]
-async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> String {
+async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> MyResponder<String> {
 	let tracks = match spotify.search_tracks(name).await {
 		Ok(artist) => serde_json::to_string(&artist).unwrap().to_string(),
 		Err(e) => format!("{{\"error\": \"{}\"}}", e),
@@ -238,7 +238,7 @@ async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> String {
 			"playlists" : playlists
 	});
 
-	serde_json::to_string_pretty(&obj).unwrap()
+	MyResponder::from(serde_json::to_string_pretty(&obj).unwrap())
 }
 
 #[get("/spotify/user_playlists")]
@@ -255,10 +255,10 @@ async fn user_playlists(spotify: &State<Arc<Spotify>>) -> MyResponder<String> {
 }
 
 #[get("/downloads/queue")]
-async fn downloads_queue(downloader: &State<Arc<Downloader>>) -> String {
+async fn downloads_queue(downloader: &State<Arc<Downloader>>) -> MyResponder<String>  {
 	let queue = downloader.get_downloads().await;
 
-	serde_json::to_string(&queue).unwrap()
+	MyResponder::from(serde_json::to_string(&queue).unwrap())
 }
 
 #[get("/downloads/add/<id>")]
@@ -266,25 +266,31 @@ async fn downloads_add(
 	id: &str,
 	downloader: &State<Arc<Downloader>>,
 	spotify: &State<Arc<Spotify>>,
-) -> String {
+) -> MyResponder<String>  {
 	// load teh track from aspotify
 	let track = match spotify.track(id).await {
 		Ok(track) => track,
 		Err(e) => {
-			return format!("{{\"error\": \"{}\"}}", e);
+			return MyResponder::from(format!("{{\"error\": \"{}\"}}", e));
 		}
 	};
 
+	// print the found track and id
+	println!("Found track: {}", track.name);
+
+	
 	// format this pretty
 	let obj = json!({
 		"status" : "added",
 		"track" : track
 	});
 	let answer = serde_json::to_string(&obj).unwrap();
-
+	
+	
+	println!("Adding track to queue: {}", track.name);
 	downloader.add_to_queue(track.into()).await;
-
-	answer
+	
+	MyResponder::from(answer)
 }
 
 #[get("/downloads/list")]

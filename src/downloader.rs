@@ -206,28 +206,38 @@ impl DownloaderInternal {
 
 	/// Wrapper for download_job for error handling
 	async fn download_job_wrapper(&self, job: DownloadJob, config: DownloaderConfig) {
-		let track_id = job.track_id.clone();
+		// if download failed, we try to redownload the track at least 3 times
+
 		let id = job.id;
-		match self.download_job(job, config).await {
-			Ok(_) => {}
-			Err(e) => {
-				error!("Download job for track {} failed. {}", track_id, e);
-				self.event_tx
-					.send(Message::UpdateState(
-						id,
-						DownloadState::Error(e.to_string()),
-					))
-					.await
-					.unwrap();
-			}
+		let track_id = job.track_id.clone();
+
+
+		for i in 0..3 {
+			info!("Trying download for track {} (attempt {}/3)", track_id, i + 1);
+			match self.download_job(job.clone(), &config).await {
+				Ok(_) => {
+					break;
+				}
+				Err(e) => {
+					error!("Download job for track {} failed. {}", track_id, e);
+					self.event_tx
+						.send(Message::UpdateState(
+							id,
+							DownloadState::Error(e.to_string()),
+						))
+						.await
+						.unwrap();
+				}
+			};
 		}
+
 	}
 
 	// Wrapper for downloading and tagging
 	async fn download_job(
 		&self,
 		job: DownloadJob,
-		config: DownloaderConfig,
+		config: &DownloaderConfig,
 	) -> Result<(), SpotifyError> {
 		// Fetch metadata
 		let track = self
@@ -446,9 +456,9 @@ impl DownloaderInternal {
 		let mut track = Track::get(session, &id).await?;
 
 		// Fallback if unavailable
-		if !track.availability.is_empty() {
-			track = DownloaderInternal::find_alternative(session, track).await?;
-		}
+		//if track.availability.is_empty() {
+		//	track = DownloaderInternal::find_alternative(session, track).await?;
+		//}
 
 		// Quality fallback
 		let mut quality = config.quality;
