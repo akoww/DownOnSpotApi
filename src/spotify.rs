@@ -8,8 +8,6 @@ use std::path::Path;
 
 use crate::error::SpotifyError;
 
-use librespot::core::Error;
-
 pub struct Spotify {
 	// librespotify sessopm
 	pub session: Session,
@@ -23,14 +21,16 @@ impl Spotify {
 		password: &str,
 		client_id: &str,
 		client_secret: &str,
-	) -> Result<Spotify, Error> {
+	) -> Result<Spotify, SpotifyError> {
 		// librespot
 		let credentials = Credentials::with_password(username, password);
-		let session = Session::new(
+		let (session, _) = Session::connect(
 			SessionConfig::default(),
+			credentials,
 			Some(Cache::new(Some(Path::new("credentials_cache")), None, None, None).unwrap()),
-		);
-		session.connect(credentials, true).await?;
+			true,
+		)
+		.await?;
 
 		//aspotify
 		let credentials = ClientCredentials {

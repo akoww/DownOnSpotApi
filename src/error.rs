@@ -4,7 +4,6 @@ use std::fmt;
 pub enum SpotifyError {
 	Error(String),
 	IoError(std::io::ErrorKind, String),
-	NotConnected,
 	MercuryError,
 	AuthenticationError,
 	Unavailable,
@@ -29,7 +28,6 @@ impl fmt::Display for SpotifyError {
 			SpotifyError::Error(e) => write!(f, "Error: {}", e),
 			SpotifyError::MercuryError => write!(f, "Mercury Error"),
 			SpotifyError::IoError(kind, err) => write!(f, "IO: {:?} {}", kind, err),
-			SpotifyError::NotConnected => write!(f, "Not connected!"),
 			SpotifyError::AuthenticationError => write!(f, "Authentication Error"),
 			SpotifyError::Unavailable => write!(f, "Unavailable!"),
 			SpotifyError::SpotifyIdError => write!(f, "Invalid Spotify ID"),
@@ -64,19 +62,9 @@ impl From<librespot::core::mercury::MercuryError> for SpotifyError {
 	}
 }
 
-impl From<librespot::core::Error> for SpotifyError {
-	fn from(e: librespot::core::Error) -> Self {
-		Self::Error(e.to_string())
-	}
-}
-
 impl From<librespot::core::session::SessionError> for SpotifyError {
 	fn from(e: librespot::core::session::SessionError) -> Self {
 		match e {
-			librespot::core::session::SessionError::NotConnected => SpotifyError::NotConnected,
-			librespot::core::session::SessionError::Packet(e) => {
-				SpotifyError::Error(format!("Packet error: {}", e))
-			}
 			librespot::core::session::SessionError::IoError(e) => e.into(),
 			librespot::core::session::SessionError::AuthenticationError(_) => {
 				SpotifyError::AuthenticationError

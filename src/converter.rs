@@ -25,11 +25,9 @@ impl AudioConverter {
 	) -> Result<AudioConverter, SpotifyError> {
 		// Create encoder
 		let bitrate = match quality {
-			Quality::QLL => 512, // this is a lie since we have a variable bit rate
 			Quality::Q320 => 320,
 			Quality::Q256 => 256,
 			Quality::Q160 => 160,
-			Quality::Q128 => 128,
 			Quality::Q96 => 96,
 		};
 
@@ -51,7 +49,6 @@ impl AudioConverter {
 
 		match format {
 			AudioFormat::Aac => todo!(),
-			AudioFormat::Flac => todo!(),
 			// Lewton decoder
 			AudioFormat::Ogg => {
 				let decoder = OggStreamReader::new(ReadWrap::new(Box::new(read)))?;
