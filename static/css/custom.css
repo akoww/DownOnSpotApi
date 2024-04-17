@@ -108,3 +108,10 @@ th:last-child, td:last-child {
 th:nth-child(2), td:nth-child(2) {
   width: auto;
 }
+
+#download_playlist span 
+{
+  margin-left: 10px;
+  width: 100px;
+  height: 100px;
+} 

@@ -9,29 +9,28 @@ use aspotify::Scope;
 use rocket::catch;
 use rocket::catchers;
 use rocket::get;
+use rocket::http::Header;
+use rocket::response::Responder;
 use rocket::routes;
 use rocket::State;
 use serde_json::json;
-use rocket::response::Responder;
-use rocket::http::Header;
 
 use crate::downloader::Downloader;
 use crate::settings::Settings;
 use crate::spotify::Spotify;
 
-
 #[derive(Responder)]
 struct MyResponder<T> {
-    inner: T,
-    my_header: Header<'static>,
+	inner: T,
+	my_header: Header<'static>,
 }
 impl<'r, 'o: 'r, T: Responder<'r, 'o>> MyResponder<T> {
-    fn new(inner: T) -> Self {
-        MyResponder {
-            inner,
-            my_header: Header::new("Access-Control-Allow-Origin", "*"),
-        }
-    }
+	fn new(inner: T) -> Self {
+		MyResponder {
+			inner,
+			my_header: Header::new("Access-Control-Allow-Origin", "*"),
+		}
+	}
 
 	fn from(inner: T) -> Self {
 		MyResponder {
@@ -45,7 +44,6 @@ struct RedirectState {
 	state: Mutex<String>,
 }
 
-
 pub async fn launch_rest(settings: &Settings, spotify: Arc<Spotify>, downloader: Arc<Downloader>) {
 	rocket::build()
 		.manage(settings.clone())
@@ -58,6 +56,7 @@ pub async fn launch_rest(settings: &Settings, spotify: Arc<Spotify>, downloader:
 		.mount("/", routes![downloads_list])
 		.mount("/", routes![downloads_queue])
 		.mount("/", routes![downloads_add])
+		.mount("/", routes![downloads_add_multi])
 		.mount("/", routes![track])
 		.mount("/", routes![album])
 		.mount("/", routes![playlist])
@@ -86,6 +85,7 @@ fn general_not_found() -> String {
 		"/downloads/list",
 		"/downloads/queue",
 		"/downloads/add/<id>",
+		"/downloads/add_multi/<ids>",
 		"/login/url",
 		"/login/confirm/<code>",
 	];
@@ -94,10 +94,10 @@ fn general_not_found() -> String {
 }
 
 fn decode_hex(s: &str) -> Result<String, ParseIntError> {
-    let as_vec = (0..s.len())
-	.step_by(2)
-	.map(|i| u8::from_str_radix(&s[i..i + 2], 16))
-	.collect::<Result<Vec<_>, _>>()?;
+	let as_vec = (0..s.len())
+		.step_by(2)
+		.map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+		.collect::<Result<Vec<_>, _>>()?;
 
 	Ok(String::from_utf8(as_vec).unwrap())
 }
@@ -120,20 +120,22 @@ async fn login_confirm(
 			return MyResponder::new(format!("{{\"error\": \"{}\"}}", e));
 		}
 	};
-	
-	match spotify.spotify.redirected(&redirect_url, &login_state).await
+
+	match spotify
+		.spotify
+		.redirected(&redirect_url, &login_state)
+		.await
 	{
-		Ok(_) => {
-			MyResponder::new("{\"state\": \"redirect success\"}".to_string())
-		}
-		Err(e) => {
-			MyResponder::new(format!("{{ \"error\": \"{}\"}}", e))
-		}
+		Ok(_) => MyResponder::new("{\"state\": \"redirect success\"}".to_string()),
+		Err(e) => MyResponder::new(format!("{{ \"error\": \"{}\"}}", e)),
 	}
 }
 
 #[get("/login/url")]
-async fn login_url(spotify: &State<Arc<Spotify>>, redirect_state: &State<RedirectState>) -> MyResponder<String> {
+async fn login_url(
+	spotify: &State<Arc<Spotify>>,
+	redirect_state: &State<RedirectState>,
+) -> MyResponder<String> {
 	let (url, state) = aspotify::authorization_url(
 		&spotify.spotify.credentials.id,
 		[
@@ -255,10 +257,65 @@ async fn user_playlists(spotify: &State<Arc<Spotify>>) -> MyResponder<String> {
 }
 
 #[get("/downloads/queue")]
-async fn downloads_queue(downloader: &State<Arc<Downloader>>) -> MyResponder<String>  {
+async fn downloads_queue(downloader: &State<Arc<Downloader>>) -> MyResponder<String> {
 	let queue = downloader.get_downloads().await;
 
 	MyResponder::from(serde_json::to_string(&queue).unwrap())
+}
+
+#[get("/downloads/add_multi/<ids>")]
+async fn downloads_add_multi(
+	ids: &str,
+	downloader: &State<Arc<Downloader>>,
+	spotify: &State<Arc<Spotify>>,
+) -> MyResponder<String> {
+	let ids = ids.split(",").collect::<Vec<&str>>();
+
+	let mut failed_answers: Vec<String> = Vec::new();
+	let mut tracks = Vec::new();
+	for id in ids {
+		match spotify.track(id).await {
+			Ok(track) => {
+				tracks.push(track);
+			}
+			// todo -  this might fail if one track fails
+			//		   we want to continue with the other tracks
+			Err(e) => {
+				let obj = json!({
+					"status" : "failed",
+					"track" : id
+				});
+				failed_answers.push(serde_json::to_string(&obj).unwrap());
+			}
+		}
+	}
+
+	let mut answers: Vec<String> = Vec::new();
+	for track in &tracks {
+		let obj = json!({
+			"status" : "added",
+			"track" : track.id
+		});
+		answers.push(serde_json::to_string(&obj).unwrap());
+	}
+
+	for track in tracks {
+		downloader.add_to_queue(track.into()).await;
+	}
+
+	// combine the answers, only include the failed answers if there are any
+	if failed_answers.len() > 0 {
+		let obj = json!({
+			"errors" :  serde_json::to_string(&failed_answers).unwrap(),
+			"added" : serde_json::to_string(&answers).unwrap()
+		});
+		return MyResponder::from(serde_json::to_string(&obj).unwrap());
+	}
+
+	let obj = json!({
+		"added" : serde_json::to_string(&answers).unwrap()
+	});
+	MyResponder::from(serde_json::to_string(&obj).unwrap())
 }
 
 #[get("/downloads/add/<id>")]
@@ -266,7 +323,7 @@ async fn downloads_add(
 	id: &str,
 	downloader: &State<Arc<Downloader>>,
 	spotify: &State<Arc<Spotify>>,
-) -> MyResponder<String>  {
+) -> MyResponder<String> {
 	// load teh track from aspotify
 	let track = match spotify.track(id).await {
 		Ok(track) => track,
@@ -278,23 +335,21 @@ async fn downloads_add(
 	// print the found track and id
 	println!("Found track: {}", track.name);
 
-	
 	// format this pretty
 	let obj = json!({
 		"status" : "added",
 		"track" : track
 	});
 	let answer = serde_json::to_string(&obj).unwrap();
-	
-	
+
 	println!("Adding track to queue: {}", track.name);
 	downloader.add_to_queue(track.into()).await;
-	
+
 	MyResponder::from(answer)
 }
 
 #[get("/downloads/list")]
-fn downloads_list(settings: &State<Settings>) -> String {
+fn downloads_list(settings: &State<Settings>) -> MyResponder<String> {
 	// function that lists all files with a defined extension within a directory
 	let extensions = vec!["flac", "ogg", "mp3", "aac"];
 
@@ -308,7 +363,7 @@ fn downloads_list(settings: &State<Settings>) -> String {
 		Err(e) => {
 			println!("Error: {}", e);
 			// create a json object with an error message
-			return "{'error': 'Could not read directory'}".to_string();
+			return MyResponder::from("{'error': 'Could not read directory'}".to_string());
 		}
 	};
 
@@ -335,5 +390,5 @@ fn downloads_list(settings: &State<Settings>) -> String {
 		"files" : files
 	});
 
-	serde_json::to_string_pretty(&obj).unwrap()
+	MyResponder::from(serde_json::to_string_pretty(&obj).unwrap())
 }

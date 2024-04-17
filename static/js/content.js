@@ -63,6 +63,33 @@ function content_playlist(params) {
 
       },
 
+
+      handleDownloadPlaylist() {
+
+        // collect all track ids and concat them
+        var track_ids = this.tracks.map(track => track.track.id);
+        var track_ids_str = track_ids.join(',');
+
+        axios.get('http://127.0.0.1:8000/downloads/add_multi/' + track_ids_str)
+          .then(response => {
+            console.log(response.data);
+
+            // display short notification
+            Toastify({
+              text: "Download Started",
+              duration: 3000
+            }).showToast();
+          })
+          .catch(error => {
+            // Handle error
+            console.error('There was an error!', error);
+            Toastify({
+              text: "Download failed: " + error.response.error,
+              duration: 3000
+            }).showToast();
+          });
+      },
+
       fetchData() {
         var playlist_id = params[0];
 
@@ -114,7 +141,7 @@ function content_playlist(params) {
     },
 
     template:
-      ` <div class="playlist_content">
+      `<div class="playlist_content">
         <div class="playlist_header">
           <div class="image">
             <img :src="image" width="192px" height="192px">
@@ -122,6 +149,9 @@ function content_playlist(params) {
           <div class="text">
             <h1>Playlist: "{{ meta.name }}"</h1>
             <p>{{ meta.owner }}</p>
+          </div>
+          <div id="download_playlist" >
+            <span class="material-symbols-outlined" @click="handleDownloadPlaylist()">download</span>
           </div>
         </div>
       </div>
@@ -264,6 +294,44 @@ function search(params) {
   }
 }
 
+function download_list() {
+  return {
+    setup() {
+      const downloads = ref([]);
+      return { downloads }
+    },
+
+    mounted() {
+      this.fetchData();
+    },
+
+    methods: {
+      fetchData() {
+        axios.get('http://127.0.0.1:8000/downloads/list')
+          .then(response => {
+            this.downloads = response.data.files;
+          })
+          .catch(error => {
+            // Handle error
+            console.error('There was an error!', error);
+          });
+      }
+    },
+
+    template:
+      `
+      <div class="download_list">
+        <h1>Downloads</h1>
+        <ul>
+          <li v-for="download in downloads">
+            {{ download }}
+          </li>
+        </ul>
+      </div>
+      `
+  }
+}
+
 
 export function content() {
   return {
@@ -282,7 +350,8 @@ export function content() {
           '#home': home,
           '#about': about,
           '#search': search,
-          '#playlist': content_playlist
+          '#playlist': content_playlist,
+          '#downloads': download_list
         };
 
         // calculate the hash it its always something like "#endpoint/param1;param2;param3"
