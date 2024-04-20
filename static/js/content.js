@@ -155,7 +155,7 @@ function content_playlist(params) {
           </div>
         </div>
       </div>
-      <table>
+      <table id="track_list">
         <thead>
           <tr>
             <th class="table_id">#</th>
@@ -263,7 +263,7 @@ function search(params) {
       <div class="text">
         <h1>Search results for: "{{ meta.name }}"</h1>
       </div>
-      <table>
+      <table id="track_list">
         <thead>
           <tr>
             <th class="table_id">#</th>

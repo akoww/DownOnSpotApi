@@ -42,19 +42,20 @@ body {
   width: 100%;
 }
 
-.container {
+.container#container {
   display: flex;
   flex-direction: row;
   padding: 0;
+  min-height: 100vh;
 }
 
 .menu {
   width: 360px;
   background-color: #222;
-  border-right: 1px solid #ddd;
-  height: 100vh;
   /* Adjust according to header and footer height */
   overflow-y: auto;
+  flex-shrink: 0;
+  max-height: inherit;
   /* Add scrollbar if content exceeds menu height */
 }
 
@@ -114,4 +115,9 @@ th:nth-child(2), td:nth-child(2) {
   margin-left: 10px;
   width: 100px;
   height: 100px;
-} 
+}
+
+table#track_list
+{
+  max-height: max-content;
+}
