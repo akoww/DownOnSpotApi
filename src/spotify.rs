@@ -1,4 +1,4 @@
-use aspotify::{AlbumSimplified, Client, ClientCredentials, ItemType, PlaylistSimplified, Track};
+use aspotify::{AlbumSimplified, Client, ClientCredentials, ItemType, Market, PlaylistSimplified, Track};
 use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
 use librespot::core::config::SessionConfig;
@@ -61,6 +61,18 @@ impl Spotify {
 		let artist = self.spotify.artists().get_artist(id).await?;
 		Ok(artist.data)
 	}
+
+
+	pub async fn artist_top_tracks(&self, id: &str) -> Result<Vec<aspotify::model::Track>, SpotifyError> {
+		let artist = self.spotify.artists().get_artist_top(id, Market::FromToken).await?;
+		Ok(artist.data)
+	}
+
+	pub async fn artist_top_albums(&self, id: &str) -> Result<aspotify::Page<aspotify::model::ArtistsAlbum>, SpotifyError> {
+		let artist = self.spotify.artists().get_artist_albums(id, None, 20, 0, None).await?;
+		Ok(artist.data)
+	}
+
 
 	pub async fn user_playlists(&self) -> Result<Vec<aspotify::model::PlaylistSimplified>, SpotifyError> {
 		let playlists = self.spotify.playlists().current_users_playlists(20,0).await?;

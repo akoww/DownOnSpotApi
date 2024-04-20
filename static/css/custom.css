@@ -87,6 +87,41 @@ flex : 1;
   margin-right: 20px; /* Adjust spacing */
 }
 
+.artist_header
+{
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+}
+
+.artist_header .text 
+{
+flex : 1;
+}
+
+.content .artist_header .image 
+{
+  flex: 0 0 auto;
+  margin-right: 20px; /* Adjust spacing */
+}
+
+.album_header
+{
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+}
+
+.album_header .text 
+{
+flex : 1;
+}
+
+.content .album_header .image 
+{
+  flex: 0 0 auto;
+  margin-right: 20px; /* Adjust spacing */
+}
 
 table {
   border-collapse: collapse;
@@ -120,4 +155,6 @@ th:nth-child(2), td:nth-child(2) {
 table#track_list
 {
   max-height: max-content;
+  border: 0;
+
 }

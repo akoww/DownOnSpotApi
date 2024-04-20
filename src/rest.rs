@@ -186,13 +186,15 @@ async fn track(spotify: &State<Arc<Spotify>>, id: &str) -> String {
 }
 
 #[get("/spotify/album/<id>")]
-async fn album(spotify: &State<Arc<Spotify>>, id: &str) -> String {
-	match spotify.album(id).await {
+async fn album(spotify: &State<Arc<Spotify>>, id: &str) -> MyResponder<String> {
+	let result = match spotify.album(id).await {
 		Ok(album) => serde_json::to_string(&album).unwrap().to_string(),
 		Err(e) => {
 			format!("{{\"error\": \"{}\"}}", e)
 		}
-	}
+	};
+
+	MyResponder::from(result)
 }
 
 #[get("/spotify/playlist/<id>")]
@@ -208,13 +210,34 @@ async fn playlist(spotify: &State<Arc<Spotify>>, id: &str) -> MyResponder<String
 }
 
 #[get("/spotify/artist/<id>")]
-async fn artist(spotify: &State<Arc<Spotify>>, id: &str) -> String {
-	match spotify.artist(id).await {
+async fn artist(spotify: &State<Arc<Spotify>>, id: &str) -> MyResponder<String> {
+	let meta = match spotify.artist(id).await {
 		Ok(artist) => serde_json::to_string(&artist).unwrap().to_string(),
 		Err(e) => {
 			format!("{{\"error\": \"{}\"}}", e)
 		}
-	}
+	};
+
+	let tracks = match spotify.artist_top_tracks(id).await {
+		Ok(artist) => serde_json::to_string(&artist).unwrap().to_string(),
+		Err(e) => {
+			format!("{{\"error\": \"{}\"}}", e)
+		}
+	};
+
+	let albums = match spotify.artist_top_albums(id).await {
+		Ok(artist) => serde_json::to_string(&artist).unwrap().to_string(),
+		Err(e) => {
+			format!("{{\"error\": \"{}\"}}", e)
+		}
+	};
+
+	let response_str = format!(
+		"{{\"meta\": {}, \"tracks\": {}, \"albums\": {}}}",
+		meta, tracks, albums
+	);
+
+	MyResponder::from(response_str)
 }
 
 #[get("/spotify/search/<name>")]
@@ -234,13 +257,12 @@ async fn search(spotify: &State<Arc<Spotify>>, name: &str) -> MyResponder<String
 		Err(e) => format!("{{\"error\": \"{}\"}}", e),
 	};
 
-	let obj = json!({
-			"tracks" : tracks,
-			"albums" : albums,
-			"playlists" : playlists
-	});
+	let response_str = format!(
+		"{{\"tracks\": {}, \"albums\": {}, \"playlists\": {}}}",
+		tracks, albums, playlists
+	);
 
-	MyResponder::from(serde_json::to_string_pretty(&obj).unwrap())
+	MyResponder::from(response_str)
 }
 
 #[get("/spotify/user_playlists")]
